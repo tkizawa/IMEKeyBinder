@@ -65,8 +65,8 @@ namespace IMEKeyBinder
             : "✓ Resident Hook Active";
 
         public static string StatusActiveDetail => IsJapanese
-            ? "「右 Alt」単体押し: IME ON (日本語) ｜ 「左 Alt」単体押し: IME OFF (英語)\n※ Alt + 他のキー（Alt+Tab, Alt+F4 など）は通常通り機能します"
-            : "Single Right Alt: IME ON (Japanese) | Single Left Alt: IME OFF (English)\n* Alt + other keys (Alt+Tab, Alt+F4, etc.) function normally";
+            ? "・右 Alt 単体押し: IME ON (日本語入力)\n・左 Alt 単体押し: IME OFF (英語入力)\n・Alt + 他のキー: 通常のキーバインド実行 (Alt+Tab, Alt+F4 など)"
+            : "• Single Right Alt: IME ON (Japanese)\n• Single Left Alt: IME OFF (English)\n• Alt + other keys: Standard shortcuts (Alt+Tab, Alt+F4, etc.)";
 
         public static string StatusInactiveTitle => IsJapanese
             ? "⚠ 停止中 (無効化されています)"
