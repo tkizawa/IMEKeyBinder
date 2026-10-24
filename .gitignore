@@ -1,0 +1,23 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+publish/
+dist/
+scratch/
+
+# Visual Studio / Rider / VSCode
+.vs/
+*.user
+*.userprefs
+*.suo
+*.ide/
+*.swp
+*.lock
+
+# Logs and databases
+*.log
+*.sqlite
+
+# OS generated files
+.DS_Store
+Thumbs.db
