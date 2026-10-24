@@ -1,6 +1,15 @@
 ; IMEKeyBinder Inno Setup Script
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.0.0"
+#endif
+#ifndef AppArch
+  #define AppArch "x64"
+#endif
+#ifndef SourceDir
+  #define SourceDir "publish\win-x64"
+#endif
+
 #define MyAppName "IMEKeyBinder"
-#define MyAppVersion "1.0.0.0"
 #define MyAppPublisher "IMEKeyBinder"
 #define MyAppExeName "IMEKeyBinder.exe"
 #define MyAppMutex "Global\IMEKeyBinder_SingleInstance_Mutex_6B7E1B1A"
@@ -14,15 +23,20 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=Installer
-OutputBaseFilename=IMEKeyBinder_Setup_v{#MyAppVersion}
+OutputBaseFilename=IMEKeyBinder_Setup_v{#MyAppVersion}_{#AppArch}
 SetupIconFile=app.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 
-; 64-bit architecture
+; Architecture
+#if LowerCase(AppArch) == "arm64"
+ArchitecturesAllowed=arm64
+ArchitecturesInstallIn64BitMode=arm64
+#else
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+#endif
 
 ; Allow user to choose install for current user or all users (administrator)
 PrivilegesRequiredOverridesAllowed=dialog
@@ -35,7 +49,7 @@ CloseApplicationsFilter={#MyAppExeName}
 
 ; Uninstall info in Control Panel
 UninstallDisplayIcon={app}\{#MyAppExeName}
-UninstallDisplayName={#MyAppName} v{#MyAppVersion}
+UninstallDisplayName={#MyAppName} v{#MyAppVersion} ({#AppArch})
 
 [Languages]
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
@@ -46,7 +60,7 @@ Name: "startup"; Description: "Windows ログオン時に自動起動する (推
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "追加のタスク:"; Flags: unchecked
 
 [Files]
-Source: "publish\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
 
 [Icons]
