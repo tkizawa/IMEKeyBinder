@@ -6,6 +6,7 @@ namespace IMEKeyBinder
 {
     /// <summary>
     /// 設定およびキー監視リアルタイムログ表示用フォーム
+    /// - 高DPI（125%, 150%等）環境での文字切れ・コントロール重なりを完全に防止する自動レイアウト
     /// - ウィンドウ位置とサイズの保存・復元に対応
     /// - Windowsテーマ設定（ライトモード/ダークモード）に対応
     /// - 多言語（日本語/英語）表示に対応
@@ -60,94 +61,115 @@ namespace IMEKeyBinder
 
         /// <summary>
         /// コントロールの初期化とレイアウト構築
+        /// 高DPI環境でも文字が切れないよう、適切な余白と自動サイズ拡張設計を採用
         /// </summary>
         private void InitializeComponent()
         {
             Text = Strings.FormTitle;
-            MinimumSize = new Size(540, 600);
+            MinimumSize = new Size(600, 720);
             StartPosition = FormStartPosition.Manual;
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+            // 日本語環境・高DPI環境でも美しい Meiryo UI / Yu Gothic UI を優先
+            Font = new Font("Yu Gothic UI", 9.5f, FontStyle.Regular);
             Icon = IconHelper.CreateAppIcon(true);
 
-            // ヘッダーパネル
+            // ==========================================
+            // ヘッダーパネル（文字切れ防止のため高さを十分確保）
+            // ==========================================
             _headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 68,
-                Padding = new Padding(20, 12, 20, 12)
+                Height = 84,
+                Padding = new Padding(24, 14, 24, 14)
             };
 
             _lblAppTitle = new Label
             {
                 Text = Strings.AppTitle,
-                Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+                Font = new Font("Yu Gothic UI", 15f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(18, 10)
+                Location = new Point(22, 12)
             };
 
             _lblAppSubtitle = new Label
             {
                 Text = Strings.AppSubtitle,
-                Font = new Font("Segoe UI", 9f),
+                Font = new Font("Yu Gothic UI", 9.5f, FontStyle.Regular),
                 AutoSize = true,
-                Location = new Point(20, 38)
+                Location = new Point(24, 46)
             };
 
             _headerPanel.Controls.Add(_lblAppTitle);
             _headerPanel.Controls.Add(_lblAppSubtitle);
 
-            // メインコンテナ
+            // ==========================================
+            // メインスクロールコンテナ
+            // ==========================================
             _mainContainer = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(20),
+                Padding = new Padding(24, 16, 24, 16),
                 AutoScroll = true
             };
 
-            int curY = 15;
+            int curY = 16;
+            int contentWidth = 580;
 
-            // 1. ステータスカード
+            // ==========================================
+            // 1. ステータスカード（高さ・内側余白を拡大し文字欠け防止）
+            // ==========================================
             _panelStatusCard = new Panel
             {
-                Location = new Point(20, curY),
-                Size = new Size(560, 78),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Location = new Point(24, curY),
+                Size = new Size(contentWidth, 98),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Padding = new Padding(18, 12, 18, 12)
+            };
+            _panelStatusCard.Paint += (s, e) =>
+            {
+                bool isDark = ThemeHelper.IsDarkMode();
+                Color border = isDark ? Color.FromArgb(46, 125, 50) : Color.FromArgb(165, 214, 167);
+                using var pen = new Pen(border, 1.5f);
+                e.Graphics.DrawRectangle(pen, 0, 0, _panelStatusCard.Width - 1, _panelStatusCard.Height - 1);
             };
 
             _lblStatusTitle = new Label
             {
                 Text = Strings.StatusActiveTitle,
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
-                Location = new Point(16, 12),
+                Font = new Font("Yu Gothic UI", 11.5f, FontStyle.Bold),
+                Location = new Point(18, 12),
                 AutoSize = true
             };
 
             _lblStatusDetail = new Label
             {
                 Text = Strings.StatusActiveDetail,
-                Font = new Font("Segoe UI", 8.8f),
-                Location = new Point(16, 36),
-                AutoSize = true
+                Font = new Font("Yu Gothic UI", 9.2f, FontStyle.Regular),
+                Location = new Point(18, 42),
+                AutoSize = true,
+                MaximumSize = new Size(contentWidth - 36, 0)
             };
 
             _panelStatusCard.Controls.Add(_lblStatusTitle);
             _panelStatusCard.Controls.Add(_lblStatusDetail);
             _mainContainer.Controls.Add(_panelStatusCard);
-            curY += 92;
+            curY += 114;
 
-            // 2. 設定グループ
+            // ==========================================
+            // 2. 設定グループ（行間とラベル・コンボボックス間隔を拡大）
+            // ==========================================
             _grpSettings = new GroupBox
             {
                 Text = Strings.SettingsGroupTitle,
-                Location = new Point(20, curY),
-                Size = new Size(560, 160),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                Location = new Point(24, curY),
+                Size = new Size(contentWidth, 195),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Padding = new Padding(16, 10, 16, 14)
             };
 
             _chkEnabled = new CheckBox
             {
                 Text = Strings.ChkEnableTitle,
-                Location = new Point(20, 26),
+                Location = new Point(20, 28),
                 AutoSize = true,
                 Checked = _settings.IsEnabled
             };
@@ -156,15 +178,18 @@ namespace IMEKeyBinder
             _lblMethod = new Label
             {
                 Text = Strings.LblMethodTitle,
-                Location = new Point(20, 58),
+                Location = new Point(20, 68),
                 AutoSize = true
             };
 
+            // ラベルの幅に関わらず重ならないよう、十分なX座標と幅を確保
             _cmbMethod = new ComboBox
             {
-                Location = new Point(150, 55),
-                Size = new Size(380, 28),
-                DropDownStyle = ComboBoxStyle.DropDownList
+                Location = new Point(180, 64),
+                Size = new Size(contentWidth - 200, 28),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                DropDownWidth = 460
             };
             _cmbMethod.Items.Add(Strings.MethodStandardOption);
             _cmbMethod.Items.Add(Strings.MethodHenkanOption);
@@ -174,7 +199,7 @@ namespace IMEKeyBinder
             _chkStartup = new CheckBox
             {
                 Text = Strings.ChkStartupTitle,
-                Location = new Point(20, 92),
+                Location = new Point(20, 110),
                 AutoSize = true,
                 Checked = AppSettings.IsStartupEnabled()
             };
@@ -183,7 +208,7 @@ namespace IMEKeyBinder
             _chkNotifications = new CheckBox
             {
                 Text = Strings.ChkNotificationsTitle,
-                Location = new Point(20, 122),
+                Location = new Point(20, 148),
                 AutoSize = true,
                 Checked = _settings.ShowNotifications
             };
@@ -195,96 +220,102 @@ namespace IMEKeyBinder
             _grpSettings.Controls.Add(_chkStartup);
             _grpSettings.Controls.Add(_chkNotifications);
             _mainContainer.Controls.Add(_grpSettings);
-            curY += 175;
+            curY += 210;
 
+            // ==========================================
             // 3. テスト入力エリア
+            // ==========================================
             _lblTest = new Label
             {
                 Text = Strings.TestAreaLabel,
-                Location = new Point(20, curY),
+                Location = new Point(24, curY),
                 AutoSize = true
             };
             _mainContainer.Controls.Add(_lblTest);
-            curY += 22;
+            curY += 26;
 
             _txtTestArea = new TextBox
             {
-                Location = new Point(20, curY),
-                Size = new Size(560, 32),
-                Font = new Font("Segoe UI", 10.5f),
+                Location = new Point(24, curY),
+                Size = new Size(contentWidth, 34),
+                Font = new Font("Yu Gothic UI", 10.5f),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 PlaceholderText = Strings.TestAreaPlaceholder
             };
             _mainContainer.Controls.Add(_txtTestArea);
-            curY += 44;
+            curY += 48;
 
+            // ==========================================
             // 4. リアルタイムログ
+            // ==========================================
             _pnlLogHeader = new Panel
             {
-                Location = new Point(20, curY),
-                Size = new Size(560, 26),
+                Location = new Point(24, curY),
+                Size = new Size(contentWidth, 32),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             _lblLog = new Label
             {
                 Text = Strings.LogHeader,
-                Location = new Point(0, 4),
+                Location = new Point(0, 6),
                 AutoSize = true,
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold)
+                Font = new Font("Yu Gothic UI", 10f, FontStyle.Bold)
             };
 
             _btnClearLog = new Button
             {
                 Text = Strings.BtnClearLog,
-                Size = new Size(90, 26),
-                Location = new Point(470, 0),
+                Size = new Size(100, 30),
+                Location = new Point(contentWidth - 100, 0),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8.5f)
+                Font = new Font("Yu Gothic UI", 9f)
             };
             _btnClearLog.Click += (s, e) => _lstLog.Items.Clear();
 
             _pnlLogHeader.Controls.Add(_lblLog);
             _pnlLogHeader.Controls.Add(_btnClearLog);
             _mainContainer.Controls.Add(_pnlLogHeader);
-            curY += 30;
+            curY += 36;
 
             _lstLog = new ListBox
             {
-                Location = new Point(20, curY),
-                Size = new Size(560, 160),
+                Location = new Point(24, curY),
+                Size = new Size(contentWidth, 180),
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-                Font = new Font("Consolas", 9f),
+                Font = new Font("Consolas", 9.5f),
                 BorderStyle = BorderStyle.FixedSingle,
                 IntegralHeight = false
             };
             _mainContainer.Controls.Add(_lstLog);
 
+            // ==========================================
             // ボトムパネル
+            // ==========================================
             _bottomPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 52,
-                Padding = new Padding(20, 8, 20, 8)
+                Height = 60,
+                Padding = new Padding(24, 12, 24, 12)
             };
 
             _lblCloseHint = new Label
             {
                 Text = Strings.CloseHint,
-                Location = new Point(20, 16),
+                Location = new Point(24, 20),
                 AutoSize = true,
-                Font = new Font("Segoe UI", 8.5f)
+                Font = new Font("Yu Gothic UI", 9f)
             };
 
             _btnHide = new Button
             {
                 Text = Strings.BtnHide,
-                Size = new Size(120, 32),
+                Size = new Size(130, 36),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(480, 9),
+                Location = new Point(contentWidth - 130 + 24, 12),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold)
+                Font = new Font("Yu Gothic UI", 9.5f, FontStyle.Bold)
             };
             _btnHide.Click += (s, e) =>
             {
@@ -308,8 +339,8 @@ namespace IMEKeyBinder
         /// </summary>
         private void RestoreWindowBounds()
         {
-            int w = _settings.WindowWidth > 300 ? _settings.WindowWidth : 640;
-            int h = _settings.WindowHeight > 400 ? _settings.WindowHeight : 700;
+            int w = _settings.WindowWidth >= 600 ? _settings.WindowWidth : 680;
+            int h = _settings.WindowHeight >= 680 ? _settings.WindowHeight : 760;
             Size = new Size(w, h);
 
             if (_settings.WindowLeft >= 0 && _settings.WindowTop >= 0)
@@ -371,6 +402,7 @@ namespace IMEKeyBinder
                 _lblAppSubtitle.ForeColor = Color.FromArgb(170, 175, 180);
 
                 _grpSettings.ForeColor = Color.FromArgb(241, 243, 244);
+                _lblMethod.ForeColor = Color.FromArgb(220, 224, 230);
                 _lblTest.ForeColor = Color.FromArgb(189, 193, 198);
 
                 _txtTestArea.BackColor = Color.FromArgb(48, 49, 52);
@@ -402,6 +434,7 @@ namespace IMEKeyBinder
                 _lblAppSubtitle.ForeColor = Color.FromArgb(173, 181, 189);
 
                 _grpSettings.ForeColor = Color.FromArgb(33, 37, 41);
+                _lblMethod.ForeColor = Color.FromArgb(55, 65, 81);
                 _lblTest.ForeColor = Color.FromArgb(73, 80, 87);
 
                 _txtTestArea.BackColor = Color.White;
