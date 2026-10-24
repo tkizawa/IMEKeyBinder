@@ -63,7 +63,7 @@ dotnet run
 他のPCへ配布したり、ワンクリックでインストール・アンインストールを行いたい場合は、生成されたスタンドアロンインストーラを使用できます。
 
 ### インストーラファイル
-- **ファイルパス**: [`dist/IMEKeyBinder_Setup_v1.0.0.exe`](file:///c:/Dev/IMEKeyBinder/dist/IMEKeyBinder_Setup_v1.0.0.exe)
+- **ファイルパス**: [`Installer/IMEKeyBinder_Setup_v1.0.0.0.exe`](file:///c:/Dev/IMEKeyBinder/Installer/IMEKeyBinder_Setup_v1.0.0.0.exe)
 - **特徴**:
   - **.NET ランタイム不要**: .NET 10 を内包した自己完結型（SingleFile）のため、.NETが未導入のクリーンなWindows PCでもそのまま動作します。
   - **日本語ウィザード**: 分かりやすいセットアップ画面で、インストール先やスタートアップ自動起動、デスクトップアイコン作成を選択可能。

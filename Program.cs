@@ -4,28 +4,33 @@ using System.Windows.Forms;
 
 namespace IMEKeyBinder
 {
+    /// <summary>
+    /// アプリケーションのエントリポイント
+    /// グローバルミューテックスによる二重起動防止と常駐コンテキストの開始を行います。
+    /// </summary>
     static class Program
     {
         private const string AppMutexName = "Global\\IMEKeyBinder_SingleInstance_Mutex_6B7E1B1A";
 
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
         [STAThread]
         static void Main()
         {
+            // 二重起動を検知・防止
             using var mutex = new Mutex(true, AppMutexName, out bool createdNew);
             if (!createdNew)
             {
                 MessageBox.Show(
-                    "IMEKeyBinder は既に起動しています。\nタスクトレイ（画面右下の通知領域）のアイコンを確認してください。",
-                    "IMEKeyBinder",
+                    Strings.AlreadyRunning,
+                    Strings.AppTitle,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
                 return;
             }
 
+            // Windows Forms の高DPI対応およびフォント初期化
             ApplicationConfiguration.Initialize();
+
+            // タスクトレイ常駐コンテキストを実行
             Application.Run(new TrayApplicationContext());
         }
     }

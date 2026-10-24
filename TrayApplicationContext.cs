@@ -4,6 +4,10 @@ using System.Windows.Forms;
 
 namespace IMEKeyBinder
 {
+    /// <summary>
+    /// タスクトレイ常駐アプリケーションコンテキスト
+    /// NotifyIcon の管理、コンテキストメニューの生成、キー監視フックの開始・停止を統括します。
+    /// </summary>
     public class TrayApplicationContext : ApplicationContext
     {
         private readonly NotifyIcon _notifyIcon;
@@ -22,43 +26,43 @@ namespace IMEKeyBinder
             _settings = AppSettings.Load();
             _hookManager = new KeyboardHookManager(_settings);
 
-            // Hook events
+            // IME切り替えイベント購読
             _hookManager.ImeActionTriggered += HookManager_ImeActionTriggered;
 
-            // Context Menu Setup
+            // コンテキストメニューの構築
             var contextMenu = new ContextMenuStrip();
 
-            _menuEnabled = new ToolStripMenuItem("有効 (AltでIME切り替え)", null, OnToggleEnabled)
+            _menuEnabled = new ToolStripMenuItem(Strings.MenuEnabled, null, OnToggleEnabled)
             {
                 Checked = _settings.IsEnabled
             };
 
-            var methodSubMenu = new ToolStripMenuItem("IME切り替え方式");
-            _menuMethodStandard = new ToolStripMenuItem("標準 (VK_IME_ON/OFF)", null, (s, e) => SetMethod(ImeSwitchMethod.Standard))
+            var methodSubMenu = new ToolStripMenuItem(Strings.MenuMethod);
+            _menuMethodStandard = new ToolStripMenuItem(Strings.MenuMethodStandard, null, (s, e) => SetMethod(ImeSwitchMethod.Standard))
             {
                 Checked = _settings.Method == ImeSwitchMethod.Standard
             };
-            _menuMethodHenkan = new ToolStripMenuItem("変換・無変換 (VK_CONVERT/NONCONVERT)", null, (s, e) => SetMethod(ImeSwitchMethod.HenkanMuhenkan))
+            _menuMethodHenkan = new ToolStripMenuItem(Strings.MenuMethodHenkan, null, (s, e) => SetMethod(ImeSwitchMethod.HenkanMuhenkan))
             {
                 Checked = _settings.Method == ImeSwitchMethod.HenkanMuhenkan
             };
             methodSubMenu.DropDownItems.Add(_menuMethodStandard);
             methodSubMenu.DropDownItems.Add(_menuMethodHenkan);
 
-            _menuStartup = new ToolStripMenuItem("Windowsログオン時に自動起動", null, OnToggleStartup)
+            _menuStartup = new ToolStripMenuItem(Strings.MenuStartup, null, OnToggleStartup)
             {
                 Checked = AppSettings.IsStartupEnabled()
             };
 
-            _menuNotifications = new ToolStripMenuItem("切り替え通知を表示", null, OnToggleNotifications)
+            _menuNotifications = new ToolStripMenuItem(Strings.MenuNotifications, null, OnToggleNotifications)
             {
                 Checked = _settings.ShowNotifications
             };
 
-            var menuOpenSettings = new ToolStripMenuItem("設定 / 動作ログを開く...", null, (s, e) => ShowSettingsForm());
+            var menuOpenSettings = new ToolStripMenuItem(Strings.MenuOpenSettings, null, (s, e) => ShowSettingsForm());
             menuOpenSettings.Font = new Font(menuOpenSettings.Font, FontStyle.Bold);
 
-            var menuExit = new ToolStripMenuItem("終了", null, OnExit);
+            var menuExit = new ToolStripMenuItem(Strings.MenuExit, null, OnExit);
 
             contextMenu.Items.Add(_menuEnabled);
             contextMenu.Items.Add(methodSubMenu);
@@ -69,25 +73,25 @@ namespace IMEKeyBinder
             contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add(menuExit);
 
-            // Setup NotifyIcon
+            // NotifyIcon の設定
             _notifyIcon = new NotifyIcon
             {
                 Icon = IconHelper.CreateAppIcon(_settings.IsEnabled),
                 ContextMenuStrip = contextMenu,
-                Text = "IMEKeyBinder (右Alt: IME ON / 左Alt: IME OFF)",
+                Text = Strings.TrayToolTip,
                 Visible = true
             };
 
             _notifyIcon.MouseClick += NotifyIcon_MouseClick;
             _notifyIcon.DoubleClick += (s, e) => ShowSettingsForm();
 
-            // Start hook
+            // キーボードフックの開始
             bool hookStarted = _hookManager.Start();
             if (!hookStarted)
             {
                 MessageBox.Show(
-                    "キーボードフックの登録に失敗しました。管理者権限が必要な場合があります。",
-                    "IMEKeyBinder エラー",
+                    Strings.HookError,
+                    Strings.ErrorDialogTitle,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
@@ -101,6 +105,9 @@ namespace IMEKeyBinder
             }
         }
 
+        /// <summary>
+        /// 設定・ログ画面を表示します。
+        /// </summary>
         private void ShowSettingsForm()
         {
             if (_settingsForm == null || _settingsForm.IsDisposed)
@@ -108,12 +115,16 @@ namespace IMEKeyBinder
                 _settingsForm = new SettingsForm(_hookManager, _settings, OnSettingsUpdated);
             }
 
+            _settingsForm.ApplyTheme();
             _settingsForm.Show();
             _settingsForm.WindowState = FormWindowState.Normal;
             _settingsForm.BringToFront();
             _settingsForm.Activate();
         }
 
+        /// <summary>
+        /// 設定変更時のUI同期
+        /// </summary>
         private void OnSettingsUpdated()
         {
             _menuEnabled.Checked = _settings.IsEnabled;
@@ -155,11 +166,11 @@ namespace IMEKeyBinder
         {
             if (_settings.ShowNotifications)
             {
-                string stateText = e.IsImeOn ? "日本語入力 (IME ON)" : "直接入力 (IME OFF)";
+                string stateText = e.IsImeOn ? Strings.ImeOnState : Strings.ImeOffState;
                 _notifyIcon.ShowBalloonTip(
                     1200,
-                    "IMEKeyBinder",
-                    $"{e.TriggerKey} → {stateText}",
+                    Strings.BalloonTitle,
+                    Strings.BalloonText(e.TriggerKey, stateText),
                     ToolTipIcon.Info);
             }
         }

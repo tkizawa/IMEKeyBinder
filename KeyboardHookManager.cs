@@ -4,10 +4,16 @@ using System.Runtime.InteropServices;
 
 namespace IMEKeyBinder
 {
+    /// <summary>
+    /// IME状態変更イベントの引数
+    /// </summary>
     public class ImeActionEventArgs : EventArgs
     {
+        /// <summary>IMEがONになったかどうか</summary>
         public bool IsImeOn { get; }
+        /// <summary>トリガーとなったキー名（右 Alt / 左 Alt）</summary>
         public string TriggerKey { get; }
+        /// <summary>イベント発生日時</summary>
         public DateTime Timestamp { get; }
 
         public ImeActionEventArgs(bool isImeOn, string triggerKey)
@@ -18,9 +24,14 @@ namespace IMEKeyBinder
         }
     }
 
+    /// <summary>
+    /// Altキーを含むコンボショートカット検出イベントの引数
+    /// </summary>
     public class KeyComboEventArgs : EventArgs
     {
+        /// <summary>検出されたキーコンボ名（例: LAlt + Key (0x09)）</summary>
         public string KeyName { get; }
+        /// <summary>イベント発生日時</summary>
         public DateTime Timestamp { get; }
 
         public KeyComboEventArgs(string keyName)
@@ -30,9 +41,15 @@ namespace IMEKeyBinder
         }
     }
 
+    /// <summary>
+    /// グローバル低レベルキーボードフック管理クラス (WH_KEYBOARD_LL)
+    /// 右Alt単体押しでIME ON、左Alt単体押しでIME OFF、コンボキー時はパススルーする処理を司ります。
+    /// </summary>
     public class KeyboardHookManager : IDisposable
     {
+        /// <summary>IME状態の切り替えがトリガーされたときのイベント</summary>
         public event EventHandler<ImeActionEventArgs>? ImeActionTriggered;
+        /// <summary>Altキーと他のキーの同時押し（コンボキー）が検出されたときのイベント</summary>
         public event EventHandler<KeyComboEventArgs>? KeyComboDetected;
 
         private IntPtr _hookId = IntPtr.Zero;
@@ -50,6 +67,9 @@ namespace IMEKeyBinder
             _hookProc = HookCallback;
         }
 
+        /// <summary>
+        /// 低レベルキーボードフックを開始します。
+        /// </summary>
         public bool Start()
         {
             if (_hookId != IntPtr.Zero) return true;
@@ -67,6 +87,9 @@ namespace IMEKeyBinder
             return _hookId != IntPtr.Zero;
         }
 
+        /// <summary>
+        /// キーボードフックを停止します。
+        /// </summary>
         public void Stop()
         {
             if (_hookId != IntPtr.Zero)
@@ -79,13 +102,17 @@ namespace IMEKeyBinder
             _isCombo = false;
         }
 
+        /// <summary>
+        /// 低レベルキーボードフックのコールバックプロシージャ
+        /// すべてのキー入力イベントを捕捉し、Altキーの単体押し離しやコンボ入力を判定します。
+        /// </summary>
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
             if (nCode >= 0)
             {
                 var hookStruct = Marshal.PtrToStructure<NativeMethods.KBDLLHOOKSTRUCT>(lParam);
 
-                // Ignore keys injected by our own process
+                // 自プロセスが SendInput で合成したキーイベント（EXTRA_INFO_MAGIC 付き）は無限ループ防止のためスキップ
                 if (hookStruct.dwExtraInfo == NativeMethods.EXTRA_INFO_MAGIC)
                 {
                     return NativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
@@ -98,6 +125,7 @@ namespace IMEKeyBinder
                 uint vk = hookStruct.vkCode;
                 bool isExtended = (hookStruct.flags & NativeMethods.LLKHF_EXTENDED) != 0;
 
+                // 英語配列キーボードにおける左右Altの判別
                 bool isLeftAlt = (vk == NativeMethods.VK_LMENU) || (vk == NativeMethods.VK_MENU && !isExtended);
                 bool isRightAlt = (vk == NativeMethods.VK_RMENU) || (vk == NativeMethods.VK_MENU && isExtended);
 
@@ -108,7 +136,9 @@ namespace IMEKeyBinder
                         if (!_leftAltPressed)
                         {
                             _leftAltPressed = true;
+                            // 既に他のキーや修飾キーが押されていればコンボ扱い
                             _isCombo = _rightAltPressed || CheckIfModifiersAlreadyPressed(isLeftAlt: true);
+                            // Windowsのメニューバー誤アクティブ化防止ダミーキー送信
                             SendDummyMaskKey();
                         }
                     }
@@ -117,13 +147,15 @@ namespace IMEKeyBinder
                         if (!_rightAltPressed)
                         {
                             _rightAltPressed = true;
+                            // 既に他のキーや修飾キーが押されていればコンボ扱い
                             _isCombo = _leftAltPressed || CheckIfModifiersAlreadyPressed(isLeftAlt: false);
+                            // Windowsのメニューバー誤アクティブ化防止ダミーキー送信
                             SendDummyMaskKey();
                         }
                     }
                     else
                     {
-                        // Any other key pressed while an Alt key is down marks this as a combo!
+                        // Altキーが押下されている最中に他のキーが押された場合はコンボと判定
                         if (_leftAltPressed || _rightAltPressed)
                         {
                             if (!_isCombo)
@@ -139,11 +171,11 @@ namespace IMEKeyBinder
                 {
                     if (isLeftAlt)
                     {
+                        // 左Altが単体で押されて離された場合 -> IME OFF
                         if (_leftAltPressed && !_isCombo && Settings.IsEnabled)
                         {
-                            // Left Alt tapped alone -> IME OFF
                             ApplyImeState(false);
-                            ImeActionTriggered?.Invoke(this, new ImeActionEventArgs(false, "左 Alt"));
+                            ImeActionTriggered?.Invoke(this, new ImeActionEventArgs(false, Strings.KeyLeftAlt));
                         }
                         _leftAltPressed = false;
                         if (!_rightAltPressed)
@@ -153,11 +185,11 @@ namespace IMEKeyBinder
                     }
                     else if (isRightAlt)
                     {
+                        // 右Altが単体で押されて離された場合 -> IME ON
                         if (_rightAltPressed && !_isCombo && Settings.IsEnabled)
                         {
-                            // Right Alt tapped alone -> IME ON
                             ApplyImeState(true);
-                            ImeActionTriggered?.Invoke(this, new ImeActionEventArgs(true, "右 Alt"));
+                            ImeActionTriggered?.Invoke(this, new ImeActionEventArgs(true, Strings.KeyRightAlt));
                         }
                         _rightAltPressed = false;
                         if (!_leftAltPressed)
@@ -168,12 +200,15 @@ namespace IMEKeyBinder
                 }
             }
 
+            // 通常のキーイベントはそのまま次へ通過（OSや他アプリのキーバインドを阻害しない）
             return NativeMethods.CallNextHookEx(_hookId, nCode, wParam, lParam);
         }
 
+        /// <summary>
+        /// 修飾キー（Ctrl, Shift, Win, または反対側のAlt）が既に押されているかを確認します。
+        /// </summary>
         private bool CheckIfModifiersAlreadyPressed(bool isLeftAlt)
         {
-            // Check other modifiers: Ctrl, Shift, Win, and the opposite Alt key
             bool otherAlt = isLeftAlt
                 ? (NativeMethods.GetAsyncKeyState(NativeMethods.VK_RMENU) & 0x8000) != 0
                 : (NativeMethods.GetAsyncKeyState(NativeMethods.VK_LMENU) & 0x8000) != 0;
@@ -185,10 +220,12 @@ namespace IMEKeyBinder
                    (NativeMethods.GetAsyncKeyState(NativeMethods.VK_RWIN) & 0x8000) != 0;
         }
 
+        /// <summary>
+        /// Windows標準の「Altキー単体押しでウィンドウメニューバーがアクティブになる挙動」を防ぐため、
+        /// 安全なダミーキー（VK_DUMMY_MASK: 0xE8）の合成入力を送信します。
+        /// </summary>
         private void SendDummyMaskKey()
         {
-            // Sends a benign mask key (VK_DUMMY_MASK: 0xE8) with EXTRA_INFO_MAGIC
-            // This prevents Windows from opening the menu bar on single Alt release.
             NativeMethods.INPUT[] inputs = new NativeMethods.INPUT[2];
             int inputSize = Marshal.SizeOf(typeof(NativeMethods.INPUT));
 
@@ -205,9 +242,13 @@ namespace IMEKeyBinder
             NativeMethods.SendInput((uint)inputs.Length, inputs, inputSize);
         }
 
+        /// <summary>
+        /// 指定された状態（ONまたはOFF）にIMEを切り替えます。
+        /// Win32メッセージとSendInput仮想キーのハイブリッド方式で、クラシックアプリからモダンアプリまで幅広く対応します。
+        /// </summary>
         public void ApplyImeState(bool enable)
         {
-            // 1. Send direct message to the active window's default IME window
+            // 1. アクティブウィンドウのデフォルトIMEウィンドウへ直接 WM_IME_CONTROL メッセージを送信
             try
             {
                 IntPtr targetHwnd = IntPtr.Zero;
@@ -238,11 +279,11 @@ namespace IMEKeyBinder
             }
             catch
             {
-                // Ignore errors from specific windows
+                // ウィンドウごとのアクセス権限によるエラーは無視
             }
 
-            // 2. Synthesize virtual key inputs (SendInput)
-            // Ensures modern apps (UWP, Windows Terminal, Edge, Chromium) also switch state reliably
+            // 2. 仮想キー入力を合成（SendInput）
+            // Chromium系 (Chrome, VSCode, Slack)、Windows Terminal、UWPなどのモダンアプリへ確実に切り替えを反映
             try
             {
                 ushort keyToSend;
@@ -272,7 +313,7 @@ namespace IMEKeyBinder
             }
             catch
             {
-                // Ignore input synthesis errors
+                // 入力合成失敗時は無視
             }
         }
 

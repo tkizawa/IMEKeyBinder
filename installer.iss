@@ -1,6 +1,6 @@
 ; IMEKeyBinder Inno Setup Script
 #define MyAppName "IMEKeyBinder"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.0.0"
 #define MyAppPublisher "IMEKeyBinder"
 #define MyAppExeName "IMEKeyBinder.exe"
 #define MyAppMutex "Global\IMEKeyBinder_SingleInstance_Mutex_6B7E1B1A"
@@ -13,12 +13,16 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
-OutputDir=dist
+OutputDir=Installer
 OutputBaseFilename=IMEKeyBinder_Setup_v{#MyAppVersion}
 SetupIconFile=app.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
+
+; 64-bit architecture
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 
 ; Allow user to choose install for current user or all users (administrator)
 PrivilegesRequiredOverridesAllowed=dialog

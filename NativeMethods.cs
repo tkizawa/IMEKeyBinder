@@ -3,15 +3,21 @@ using System.Runtime.InteropServices;
 
 namespace IMEKeyBinder
 {
+    /// <summary>
+    /// Win32 API / IMM32 API の P/Invoke 定義および構造体定義
+    /// </summary>
     internal static class NativeMethods
     {
+        // 低レベルキーボードフック定数
         public const int WH_KEYBOARD_LL = 13;
 
+        // Windows メッセージ定数
         public const int WM_KEYDOWN = 0x0100;
         public const int WM_KEYUP = 0x0101;
         public const int WM_SYSKEYDOWN = 0x0104;
         public const int WM_SYSKEYUP = 0x0105;
 
+        // 仮想キーコード (Alt / 修飾キー)
         public const int VK_MENU = 0x12;
         public const int VK_LMENU = 0xA4;
         public const int VK_RMENU = 0xA5;
@@ -21,12 +27,13 @@ namespace IMEKeyBinder
         public const int VK_LWIN = 0x5B;
         public const int VK_RWIN = 0x5C;
 
+        // 仮想キーコード (IME制御・変換)
         public const ushort VK_IME_ON = 0x16;
         public const ushort VK_IME_OFF = 0x1A;
         public const ushort VK_CONVERT = 0x1C;
         public const ushort VK_NONCONVERT = 0x1D;
 
-        // Dummy key to prevent Alt menu bar activation (0xE8 is unassigned in standard layout)
+        // Alt単体押し時のメニューバー活性化防止用ダミーキーコード (標準レイアウトで未割り当ての0xE8)
         public const ushort VK_DUMMY_MASK = 0xE8;
 
         public const uint WM_IME_CONTROL = 0x0283;

@@ -1,4 +1,7 @@
-# IMEKeyBinder Standalone Installer Build Script
+# IMEKeyBinder スタンドアロンインストーラ自動ビルドスクリプト
+# 実行環境のアーキテクチャ（x64 / arm64）に合わせて自己完結型EXEを発行し、
+# Inno Setup を用いて .\Installer フォルダ配下にインストーラを生成します。
+
 param(
     [string]$Configuration = "Release"
 )
@@ -10,19 +13,26 @@ Write-Host "=== IMEKeyBinder インストーラビルド開始 ===" -ForegroundC
 $rootDir = $PSScriptRoot
 Set-Location $rootDir
 
-# 1. Check/Generate app.ico if not exists
-if (-not (Test-Path "$rootDir\app.ico")) {
-    Write-Host "[1/4] app.ico を生成中..." -ForegroundColor Yellow
-    # Icon generation logic
-} else {
-    Write-Host "[1/4] app.ico 確認完了" -ForegroundColor Green
+# 1. 実行環境のアーキテクチャ判定
+$osArch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLower()
+$rid = switch ($osArch) {
+    "arm64" { "win-arm64" }
+    default { "win-x64" }
 }
+Write-Host "[1/4] ターゲットアーキテクチャ: $rid ($osArch)" -ForegroundColor Green
 
-# 2. Publish self-contained single-file binary
-Write-Host "[2/4] .NET 10 自己完結型バイナリ (win-x64) を発行中..." -ForegroundColor Yellow
+# 2. app.ico の存在確認
+if (-not (Test-Path "$rootDir\app.ico")) {
+    Write-Error "app.ico が見つかりません。"
+    exit 1
+}
+Write-Host "[2/4] アプリアイコン確認完了" -ForegroundColor Green
+
+# 3. .NET 10 自己完結型（SingleFile）バイナリの発行
+Write-Host "[3/4] .NET 10 自己完結型バイナリ ($rid) を発行中..." -ForegroundColor Yellow
 dotnet publish "$rootDir\IMEKeyBinder.csproj" `
     -c $Configuration `
-    -r win-x64 `
+    -r $rid `
     --self-contained true `
     -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
@@ -35,8 +45,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "発行成功: $rootDir\publish\IMEKeyBinder.exe" -ForegroundColor Green
 
-# 3. Locate ISCC.exe (Inno Setup Compiler)
-Write-Host "[3/4] Inno Setup コンパイラを探索中..." -ForegroundColor Yellow
+# 4. Inno Setup コンパイラ (ISCC.exe) の探索
+Write-Host "[4/4] Inno Setup コンパイラを探索中..." -ForegroundColor Yellow
 $isccPaths = @(
     "C:\Users\$env:USERNAME\AppData\Local\Programs\Inno Setup 6\ISCC.exe",
     "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
@@ -56,8 +66,12 @@ if (-not $iscc) {
 }
 Write-Host "ISCC 検出: $iscc" -ForegroundColor Green
 
-# 4. Build Installer
-Write-Host "[4/4] スタンドアロンインストーラをビルド中..." -ForegroundColor Yellow
+# 5. インストーラのビルド実行
+Write-Host "スタンドアロンインストーラを .\Installer フォルダに生成中..." -ForegroundColor Yellow
+if (-not (Test-Path "$rootDir\Installer")) {
+    New-Item -ItemType Directory -Path "$rootDir\Installer" | Out-Null
+}
+
 & $iscc "$rootDir\installer.iss"
 
 if ($LASTEXITCODE -ne 0) {
@@ -65,7 +79,7 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-$outputExe = Get-ChildItem "$rootDir\dist\*.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$outputExe = Get-ChildItem "$rootDir\Installer\*.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "🎉 ビルド完了！スタンドアロンインストーラ:" -ForegroundColor Green
 Write-Host "ファイルパス: $($outputExe.FullName)" -ForegroundColor White

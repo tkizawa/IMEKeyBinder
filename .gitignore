@@ -1,8 +1,10 @@
-# Build results
+# Build results and installers
 [Bb]in/
 [Oo]bj/
 publish/
 dist/
+Installer/
+MSIX/
 scratch/
 
 # Visual Studio / Rider / VSCode
