@@ -1,4 +1,4 @@
-# IMEKeyBinder スタンドアロンインストーラ自動ビルドスクリプト
+﻿# IMEKeyBinder スタンドアロンインストーラ自動ビルドスクリプト
 # 指定されたアーキテクチャ（x64 / arm64 / all）に合わせて自己完結型EXEを発行し、
 # Inno Setup を用いて .\Installer フォルダ配下にインストーラを生成します。
 
@@ -50,8 +50,8 @@ $isccPaths = @(
 $iscc = $isccPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 if (-not $iscc) {
-    $whereIscc = (Get-Command "iscc.exe" -ErrorAction SilentlyContinue)?.Source
-    if ($whereIscc) { $iscc = $whereIscc }
+    $cmdIscc = Get-Command "iscc.exe" -ErrorAction SilentlyContinue
+    if ($cmdIscc) { $iscc = $cmdIscc.Source }
 }
 
 if (-not $iscc) {
@@ -107,7 +107,7 @@ foreach ($target in $targets) {
 }
 
 Write-Host "`n==========================================" -ForegroundColor Cyan
-Write-Host "🎉 ビルド完了！スタンドアロンインストーラ:" -ForegroundColor Green
+Write-Host "[OK] ビルド完了！スタンドアロンインストーラ:" -ForegroundColor Green
 foreach ($file in $createdFiles) {
     Write-Host "  [$($file.Name)]" -ForegroundColor Yellow
     Write-Host "    パス: $($file.FullName)" -ForegroundColor White
